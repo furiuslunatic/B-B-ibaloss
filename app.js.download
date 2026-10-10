@@ -1,0 +1,364 @@
+/* I Baloss — quaderno interattivo */
+(function () {
+  'use strict';
+
+  /* ---------- disegni a mano: lunghezze reali + delay scalati per svg ---------- */
+  ['heroBaloss', 'houseSvg'].forEach(function (id) {
+    const root = document.getElementById(id);
+    if (!root) return;
+    let delay = 0.15;
+    root.querySelectorAll('.draw').forEach(function (p) {
+      const len = Math.ceil(p.getTotalLength ? p.getTotalLength() : 600) + 4;
+      p.style.setProperty('--len', len);
+      p.style.setProperty('--d', delay.toFixed(2) + 's');
+      delay += Math.min(0.34, len / 1800);
+    });
+  });
+
+  /* ---------- occhi dei baloss: pupille che seguono il cursore ---------- */
+  const eyeRigs = [
+    { svg: document.getElementById('heroBaloss'), centers: [{ x: 62, y: 53 }, { x: 98, y: 53 }], range: 3.2 },
+    { svg: document.getElementById('houseSvg'), centers: [{ x: 143, y: 292 }, { x: 179, y: 292 }], range: 3.4 }
+  ].filter(function (rig) { return rig.svg; });
+  eyeRigs.forEach(function (rig) {
+    rig.pupils = rig.svg.querySelectorAll('.pupil');
+  });
+
+  function movePupils(clientX, clientY) {
+    eyeRigs.forEach(function (rig) {
+      const r = rig.svg.getBoundingClientRect();
+      if (r.width === 0) return;
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const dx = (clientX - cx) / r.width;
+      const dy = (clientY - cy) / r.height;
+      const mx = Math.max(-1, Math.min(1, dx * 1.6)) * rig.range;
+      const my = Math.max(-1, Math.min(1, dy * 1.6)) * rig.range;
+      rig.pupils.forEach(function (p, i) {
+        p.setAttribute('cx', rig.centers[i].x + mx);
+        p.setAttribute('cy', rig.centers[i].y + my);
+      });
+    });
+  }
+
+  if (window.matchMedia('(pointer: fine)').matches) {
+    document.addEventListener('mousemove', function (e) {
+      window.requestAnimationFrame(function () { movePupils(e.clientX, e.clientY); });
+    });
+  }
+
+  /* battito di ciglia ogni tanto */
+  const lids = document.querySelectorAll('#heroBaloss .lid, #houseSvg .lid');
+  function blink() {
+    lids.forEach(function (l) {
+      l.setAttribute('height', l.dataset.h || '22');
+    });
+    setTimeout(function () {
+      lids.forEach(function (l) { l.setAttribute('height', '0'); });
+    }, 140);
+    setTimeout(blink, 2600 + Math.random() * 3400);
+  }
+  setTimeout(blink, 3200);
+
+  /* ---------- navbar: nascondi allo scroll giù ---------- */
+  const navbar = document.getElementById('navbar');
+  let lastY = window.scrollY;
+  window.addEventListener('scroll', function () {
+    const y = window.scrollY;
+    if (y > 140 && y > lastY + 6) navbar.classList.add('hidden');
+    else if (y < lastY - 6 || y < 140) navbar.classList.remove('hidden');
+    lastY = y;
+  }, { passive: true });
+
+  /* ---------- menu mobile ---------- */
+  const burger = document.getElementById('navBurger');
+  const navLinks = document.getElementById('navLinks');
+  burger.addEventListener('click', function () {
+    const open = navLinks.classList.toggle('open');
+    burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  navLinks.querySelectorAll('a').forEach(function (a) {
+    a.addEventListener('click', function () {
+      navLinks.classList.remove('open');
+      burger.setAttribute('aria-expanded', 'false');
+    });
+  });
+
+  /* ---------- tilt foto scrapbook ---------- */
+  document.querySelectorAll('[data-tilt]').forEach(function (el) {
+    el.style.setProperty('--tilt', el.dataset.tilt + 'deg');
+  });
+
+  /* ---------- reveal on scroll ---------- */
+  const io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (en.isIntersecting) {
+        en.target.classList.add('in');
+        io.unobserve(en.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+  document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
+
+  /* ---------- parallax banner ---------- */
+  const banners = Array.from(document.querySelectorAll('.banner')).map(function (b) {
+    return { el: b, img: b.querySelector('.banner-img') };
+  }).filter(function (b) { return b.img; });
+  let parallaxTick = false;
+  function parallax() {
+    parallaxTick = false;
+    const vh = window.innerHeight;
+    banners.forEach(function (b) {
+      const r = b.el.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > vh) return;
+      /* p: -1 (banner appena sotto il viewport) → +1 (appena sopra) */
+      const p = ((vh - r.top) / (vh + r.height)) * 2 - 1;
+      b.img.style.transform = 'translateY(' + (p * 6).toFixed(2) + '%)';
+    });
+  }
+  window.addEventListener('scroll', function () {
+    if (!parallaxTick) {
+      parallaxTick = true;
+      window.requestAnimationFrame(parallax);
+    }
+  }, { passive: true });
+  parallax();
+
+  /* ---------- lightbox ---------- */
+  const lightbox = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lbImg');
+  const lbCaption = document.getElementById('lbCaption');
+  const lbClose = document.getElementById('lbClose');
+
+  document.querySelectorAll('.scrap').forEach(function (fig) {
+    fig.addEventListener('click', function () {
+      const img = fig.querySelector('img');
+      const cap = fig.querySelector('figcaption');
+      lbImg.src = img.src;
+      lbImg.alt = img.alt;
+      lbCaption.textContent = cap ? cap.textContent : '';
+      lightbox.hidden = false;
+      document.body.style.overflow = 'hidden';
+    });
+  });
+  function closeLb() {
+    lightbox.hidden = true;
+    document.body.style.overflow = '';
+  }
+  lbClose.addEventListener('click', closeLb);
+  lightbox.addEventListener('click', function (e) { if (e.target === lightbox) closeLb(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !lightbox.hidden) closeLb(); });
+
+  /* ---------- form: stima notti + conferma ---------- */
+  const form = document.getElementById('bookForm');
+  const fIn = document.getElementById('fIn');
+  const fOut = document.getElementById('fOut');
+  const fGuests = document.getElementById('fGuests');
+  const estimate = document.getElementById('formEstimate');
+  const formDone = document.getElementById('formDone');
+
+  const today = new Date();
+  const iso = function (d) { return d.toISOString().slice(0, 10); };
+  fIn.min = iso(today);
+  fOut.min = iso(today);
+
+  function updateEstimate() {
+    estimate.textContent = '';
+    if (!fIn.value || !fOut.value) return;
+    const a = new Date(fIn.value);
+    const b = new Date(fOut.value);
+    const nights = Math.round((b - a) / 86400000);
+    if (nights <= 0) return;
+    const g = parseInt(fGuests.value, 10);
+    let min, max;
+    if (g === 1) { min = 50; max = 60; }
+    else if (g === 2) { min = 70; max = 80; }
+    else { min = 70 + (g - 2) * 20; max = 80 + (g - 2) * 20; }
+    const lang = document.documentElement.lang;
+    const nightsTxt = lang === 'en'
+      ? nights + (nights === 1 ? ' night' : ' nights')
+      : nights + (nights === 1 ? ' notte' : ' notti');
+    const approxTxt = lang === 'en' ? 'roughly' : 'circa';
+    const extra = nights > 3 ? (lang === 'en' ? ' — ask us for a long-stay discount!' : ' — chiedici lo sconto lunghi soggiorni!') : '';
+    estimate.textContent = '✎ ' + nightsTxt + ', ' + approxTxt + ' €' + (min * nights) + '–' + (max * nights) + extra;
+  }
+  [fIn, fOut, fGuests].forEach(function (el) { el.addEventListener('change', updateEstimate); });
+  fIn.addEventListener('change', function () { if (fIn.value) fOut.min = fIn.value; });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+    formDone.hidden = false;
+    /* riavvia l'animazione del check */
+    const check = formDone.querySelector('.check');
+    check.style.animation = 'none';
+    void check.getBoundingClientRect();
+    check.style.animation = '';
+  });
+
+  /* ---------- i18n IT / EN ---------- */
+  const EN = {
+    nav_apt: "The apartment",
+    nav_extra: "Cheeky extras",
+    nav_about: "About us",
+    nav_valley: "Our valley",
+    nav_book: "Book",
+    hero_caption: "← there's always a baloss peeking",
+    hero_kicker: "Bed & Breakfast in Berbenno · Imagna Valley · 30 min from Bergamo",
+    hero_sub: "A family-run B&B immersed in the green of the Imagna Valley: a 45 m² apartment all for you, a panoramic terrace over the valley and a breakfast you can enjoy in your pajamas. <em>Baloss</em>, in Bergamasque dialect, means rascal — and we are, a little.",
+    hero_cta1: "Write us to book",
+    hero_cta2: "See the apartment ↓",
+    fact_apt: "just for you",
+    fact_bg: "from Bergamo",
+    fact_night: "per night",
+    apt_title: "The apartment",
+    apt_lead: "Chiara and her family welcome you in a 45 m² apartment <strong>for the exclusive use of guests</strong>, with independent entrance: the freedom of a holiday home, the services of a bed and breakfast, and the Imagna Valley outside the window.",
+    cap_casa: "our house, immersed in the green",
+    cap_sogg: "the living room with sofa bed",
+    cap_cucina: "the fully equipped kitchen",
+    cap_camera: "the double bedroom",
+    cap_bagno: "bathroom with tub and shower",
+    cap_frutta: "the welcome fruit basket ♥",
+    apt_p1: "The parquet-floored apartment is fully furnished and equipped with utensils and tableware: double bedroom, bathroom with tub and shower, ample living room with equipped kitchen, double sofa bed and TV. Bed, bath and kitchen linen included: ideal for couples and families of up to four.",
+    apt_p2: "Guests enjoy the wide garden and the <strong>exclusive use of the panoramic terrace</strong> over the valley. Children are welcome and will find toys and games for their age. The Italian or continental breakfast, prepared with local and home-grown products, is served in the B&B or on the terrace. The house is in Berbenno, a small village overlooking the valley: handy for visiting Bergamo and the lakes, far enough away to guarantee peace and quiet.",
+    am_1: "45 m² with independent entrance",
+    am_2: "Exclusive panoramic terrace",
+    am_3: "Wide garden and barbecue",
+    am_4: "Free Wi-Fi",
+    am_5: "Covered parking",
+    am_6: "Toys and games for kids",
+    rates_title: "Daily rates",
+    rate_1: "One person",
+    rate_2: "Two people",
+    rate_3: "Third and fourth person",
+    rate_4: "Children under 3",
+    rate_5: "Children under 8",
+    each: "each",
+    free: "free!",
+    rates_note: "Rates vary with the season and include breakfast, linen and daily cleaning. Negotiable prices for stays longer than three days.",
+    rates_stamp: "breakfast included ✓",
+    extra_title: "Cheeky extras",
+    extra_lead: "The extra services that make your stay a little more mischievous. Book them directly with us, even at the last minute.",
+    ex1_t: "Mountain bike",
+    ex1_d: "MTB rental to explore the valley trails.",
+    perday: "per day",
+    ex2_t: "Barbecue",
+    ex2_d: "A barbecue in the garden overlooking the valley.",
+    ex3_t: "Baby-sitting",
+    ex3_d: "A free evening for you, games for them.",
+    perhour: "per hour",
+    ex4_t: "Argentine tango",
+    ex4_d: "Individual or couple lessons for beginners.",
+    perhour2: "per hour",
+    ex5_t: "Board game night",
+    ex5_d: "Choose among more than 50 different games. Our speciality.",
+    perperson: "per person",
+    extras_note: "↑ yes, we really own more than 50 board games",
+    about_title: "About us",
+    about_lead: "B&B \"I Baloss\" in Berbenno is entirely family-run. To those who choose to stay in the Imagna Valley we wish to offer four things, done well.",
+    v1_t: "A personalized welcome",
+    v1_d: "Our tourism is not made of big numbers: we take care to answer the requests and needs of every guest.",
+    v2_t: "A quiet, homely environment",
+    v2_d: "Where you can relax surrounded by green, feel at home and — why not? — enjoy a rich breakfast in your pajamas. That's the beauty of B&Bs!",
+    v3_t: "Environmentally-sustainable tourism",
+    v3_d: "We sort and reduce waste and avoid food waste. The food we offer is preferably home-grown or local. We are members of the <a href=\"http://ecoturismovalleimagna.it/\" target=\"_blank\" rel=\"noopener\">Imagna Valley Eco-tourism Association</a>.",
+    v4_t: "The love we feel for our valley",
+    v4_d: "It's our pleasure to introduce guests to the natural, artistic and cultural beauties of the Imagna Valley, with useful information and materials to make the most of your stay.",
+    cap_lato: "the south side, where the sun shines all day",
+    valle_title: "The Imagna Valley",
+    valle_tag: "naturally beautiful, half an hour from Bergamo",
+    valle_lead: "A small green valley in the Bergamo Pre-Alps, half an hour from Bergamo and one hour from Milan, rich in trails, rural hamlets and traditions. Crossed by the Imagna creek and separated from Lake Como by Mount Resegone, it is the ideal destination for a holiday of nature, sport and relaxation — <strong>with no Sunday-evening traffic jams</strong>.",
+    va1_t: "In nature",
+    va1_d: "Panoramic tracks on foot, with snowshoes, by MTB, e-bike, on horseback or with llamas, across meadows, woods and rural hamlets. In the nearby Adda River Park you cross the river on <strong>Leonardo da Vinci's ferry</strong>. In winter, ski slopes one hour away.",
+    va2_t: "Sport & adventure",
+    va2_d: "Treetop trails among beech trees at the Roncola Adventure Park, <strong>paragliding from Mount Linzone</strong>, golf at the Albenza Club, speleological tours in the valley's caves.",
+    va3_t: "Spa & relaxation",
+    va3_d: "The S. Omobono thermal baths, the wellness centre and the new <strong>San Pellegrino Spa</strong>: thermal water and silence a few minutes from the B&B.",
+    va4_t: "With children",
+    va4_d: "Le Cornelle animal park, <strong>Leolandia</strong> amusement park, the Sun Tower astronomical park and sport-fishing ponds.",
+    va5_t: "Spirituality",
+    va5_d: "The Cornabusa Sanctuary, the birthplace of <strong>Pope John XXIII</strong> in Sotto il Monte, and paths dotted with \"Santelle\", the little stone chapels of wayfarers.",
+    va6_t: "Art & cities",
+    va6_d: "Bergamo's <strong>Upper Town</strong>, the Rotonda di San Tomè and San Giorgio in Lemine (Romanesque Park), the Arnosto hamlet. Within an hour: Lake Como and Lake Iseo with Mont'Isola.",
+    cap_para: "flying from Mount Linzone",
+    cap_terme: "the S. Pellegrino spa",
+    cap_tome: "the Rotonda di S. Tomè",
+    faq_title: "Frequently asked questions",
+    faq_lead: "The things we get asked most often, in short. For everything else: phone, email or WhatsApp.",
+    faq_q1: "Where is B&B I Baloss?",
+    faq_a1: "In Berbenno, in the Imagna Valley (province of Bergamo), at Via Europa 46: about 30 minutes by car from Bergamo and one hour from Milan (A4 motorway, Dalmine exit). The house overlooks the valley.",
+    faq_q2: "How much does a night cost?",
+    faq_a2: "From €50 to €60 for one person and from €70 to €80 for two, depending on the season; third and fourth person €20 each, children free up to 3 years and €10 up to 8. Breakfast, linen and daily cleaning included. Negotiable prices for stays longer than three days.",
+    faq_q3: "Is the apartment shared with other guests?",
+    faq_a3: "No: the 45 m² apartment is for guests' exclusive use, with independent entrance, equipped kitchen and a reserved panoramic terrace. The freedom of a holiday home, with the breakfast of a bed and breakfast.",
+    faq_q4: "What is breakfast like?",
+    faq_a4: "Italian or continental, preferably prepared with local or home-grown products, served in the B&B or on the terrace. In your pajamas, if you like: that's the beauty of bed and breakfasts.",
+    faq_q5: "Is there parking? And Wi-Fi?",
+    faq_a5: "Yes to both: covered parking and free Wi-Fi. There is also a barbecue in the garden, on request.",
+    faq_q6: "What can you do nearby?",
+    faq_a6: "Walking and mountain-bike trails, the San Pellegrino and Sant'Omobono thermal baths, paragliding from Mount Linzone, Bergamo's Upper Town, the Romanesque Rotonda di San Tomè and, for children, Leolandia and the Le Cornelle animal park.",
+    contact_title: "Write us",
+    contact_lead: "Tell us when you'd like to stay in the Imagna Valley and how many you are: we reply within the day, on WhatsApp too.",
+    addr_valley: "Imagna Valley — Lombardy",
+    howto_t: "how to get here →",
+    howto_d: "From Bergamo: SP470 of Val Brembana, then SP14 into the Imagna Valley up to Berbenno. About 30 minutes. From Milan: A4 motorway, Dalmine exit, then towards Almenno — about one hour.",
+    f_name: "Name",
+    f_mail: "Email",
+    f_in: "Check-in",
+    f_out: "Check-out",
+    f_guests: "Guests",
+    g1: "1 person",
+    g2: "2 people",
+    g3: "3 people",
+    g4: "4 people",
+    f_msg: "Message",
+    ph_msg: "We're coming with two small kids…",
+    f_send: "Send request",
+    f_note: "no payment now — it's just a request",
+    f_done: "Request sent! We'll reply very soon ✶",
+    ft_tag: "— bed and breakfast in the Imagna Valley",
+    ft_demo: "Redesign demo — \"the baloss's notebook\" concept · contents and photos from the original ibaloss.com"
+  };
+
+  /* snapshot dell'italiano dal DOM */
+  const IT = {};
+  document.querySelectorAll('[data-i18n]').forEach(function (el) {
+    IT[el.dataset.i18n] = el.innerHTML;
+  });
+  const IT_PH = {};
+  document.querySelectorAll('[data-i18n-ph]').forEach(function (el) {
+    IT_PH[el.dataset.i18nPh] = el.placeholder;
+  });
+  const EN_PH = { ph_msg: "We're coming with two small kids…" };
+
+  const langBtns = document.querySelectorAll('.lang-btn');
+  function setLang(lang) {
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-i18n]').forEach(function (el) {
+      const k = el.dataset.i18n;
+      const v = lang === 'en' ? EN[k] : IT[k];
+      if (v !== undefined) el.innerHTML = v;
+    });
+    document.querySelectorAll('[data-i18n-ph]').forEach(function (el) {
+      const k = el.dataset.i18nPh;
+      el.placeholder = lang === 'en' ? (EN_PH[k] || el.placeholder) : IT_PH[k];
+    });
+    langBtns.forEach(function (b) {
+      const on = b.dataset.lang === lang;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    updateEstimate();
+    try { localStorage.setItem('ibaloss-lang', lang); } catch (err) { /* private mode */ }
+  }
+  langBtns.forEach(function (b) {
+    b.addEventListener('click', function () { setLang(b.dataset.lang); });
+  });
+  try {
+    const saved = localStorage.getItem('ibaloss-lang');
+    if (saved === 'en') setLang('en');
+  } catch (err) { /* private mode */ }
+})();
