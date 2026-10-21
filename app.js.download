@@ -149,20 +149,22 @@
   lightbox.addEventListener('click', function (e) { if (e.target === lightbox) closeLb(); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !lightbox.hidden) closeLb(); });
 
-  /* ---------- form: stima notti + conferma ---------- */
+  /* ---------- form: stima notti + invio reale ---------- */
   const form = document.getElementById('bookForm');
   const fIn = document.getElementById('fIn');
   const fOut = document.getElementById('fOut');
   const fGuests = document.getElementById('fGuests');
   const estimate = document.getElementById('formEstimate');
-  const formDone = document.getElementById('formDone');
 
   const today = new Date();
   const iso = function (d) { return d.toISOString().slice(0, 10); };
-  fIn.min = iso(today);
-  fOut.min = iso(today);
+  if (fIn && fOut) {
+    fIn.min = iso(today);
+    fOut.min = iso(today);
+  }
 
   function updateEstimate() {
+    if (!estimate || !fIn || !fOut || !fGuests) return;
     estimate.textContent = '';
     if (!fIn.value || !fOut.value) return;
     const a = new Date(fIn.value);
@@ -171,9 +173,9 @@
     if (nights <= 0) return;
     const g = parseInt(fGuests.value, 10);
     let min, max;
-    if (g === 1) { min = 50; max = 60; }
-    else if (g === 2) { min = 70; max = 80; }
-    else { min = 70 + (g - 2) * 20; max = 80 + (g - 2) * 20; }
+    if (g === 1) { min = 60; max = 70; }
+    else if (g === 2) { min = 70; max = 90; }
+    else { min = 70 + (g - 2) * 30; max = 90 + (g - 2) * 30; }
     const lang = document.documentElement.lang;
     const nightsTxt = lang === 'en'
       ? nights + (nights === 1 ? ' night' : ' nights')
@@ -182,24 +184,14 @@
     const extra = nights > 3 ? (lang === 'en' ? ' — ask us for a long-stay discount!' : ' — chiedici lo sconto lunghi soggiorni!') : '';
     estimate.textContent = '✎ ' + nightsTxt + ', ' + approxTxt + ' €' + (min * nights) + '–' + (max * nights) + extra;
   }
-  [fIn, fOut, fGuests].forEach(function (el) { el.addEventListener('change', updateEstimate); });
-  fIn.addEventListener('change', function () { if (fIn.value) fOut.min = fIn.value; });
+  if (fIn && fOut && fGuests) {
+    [fIn, fOut, fGuests].forEach(function (el) { el.addEventListener('change', updateEstimate); });
+    fIn.addEventListener('change', function () { if (fIn.value) fOut.min = fIn.value; });
+  }
 
-  form.addEventListener('submit', function (e) {
-    e.preventDefault();
-    if (!form.checkValidity()) {
-      form.reportValidity();
-      return;
-    }
-    formDone.hidden = false;
-    /* riavvia l'animazione del check */
-    const check = formDone.querySelector('.check');
-    check.style.animation = 'none';
-    void check.getBoundingClientRect();
-    check.style.animation = '';
-  });
+  /* Blocco preventDefault eliminato: il form ora invia i dati direttamente a Formspree */
 
-  /* ---------- i18n IT / EN ---------- */
+  /* ---------- i18n IT / EN (aggiornato ai nuovi testi e prezzi) ---------- */
   const EN = {
     nav_apt: "The apartment",
     nav_extra: "Cheeky extras",
@@ -215,21 +207,21 @@
     fact_bg: "from Bergamo",
     fact_night: "per night",
     apt_title: "The apartment",
-    apt_lead: "Chiara and her family welcome you in a 45 m² apartment <strong>for the exclusive use of guests</strong>, with independent entrance: the freedom of a holiday home, the services of a bed and breakfast, and the Imagna Valley outside the window.",
-    cap_casa: "our house, immersed in the green",
-    cap_sogg: "the living room with sofa bed",
-    cap_cucina: "the fully equipped kitchen",
+    apt_lead: "Chiara and her family welcome you to a 45 m² apartment <strong>for the exclusive use of guests</strong>, with independent entrance: the freedom of a holiday home, the services of a bed and breakfast, and the Imagna Valley outside your window.",
+    cap_casa: "our house, immersed in greenery",
+    cap_sogg: "the living room with a comfortable double sofa bed",
+    cap_cucina: "the kitchen, fully equipped",
     cap_camera: "the double bedroom",
-    cap_bagno: "bathroom with tub and shower",
+    cap_bagno: "bathroom with shower",
     cap_frutta: "the welcome fruit basket ♥",
     apt_p1: "The parquet-floored apartment is fully furnished and equipped with utensils and tableware: double bedroom, bathroom with tub and shower, ample living room with equipped kitchen, double sofa bed and TV. Bed, bath and kitchen linen included: ideal for couples and families of up to four.",
-    apt_p2: "Guests enjoy the wide garden and the <strong>exclusive use of the panoramic terrace</strong> over the valley. Children are welcome and will find toys and games for their age. The Italian or continental breakfast, prepared with local and home-grown products, is served in the B&B or on the terrace. The house is in Berbenno, a small village overlooking the valley: handy for visiting Bergamo and the lakes, far enough away to guarantee peace and quiet.",
+    apt_p2: "Guests enjoy the wide garden and the <strong>exclusive use of the panoramic terrace</strong> over the valley. Children are welcome and will find toys and games suitable for their age. The Italian or continental breakfast, prepared with local and home-grown products, is served in the B&B or on the terrace. The house is in Berbenno, a small village overlooking the valley: handy for visiting Bergamo and the lakes, far enough away to guarantee peace and quiet.",
     am_1: "45 m² with independent entrance",
     am_2: "Exclusive panoramic terrace",
     am_3: "Wide garden and barbecue",
-    am_4: "Free Wi-Fi",
+    am_4: "Fiber optic Wi-Fi",
     am_5: "Covered parking",
-    am_6: "Toys and games for kids",
+    am_6: "Games for kids and adults",
     rates_title: "Daily rates",
     rate_1: "One person",
     rate_2: "Two people",
@@ -238,8 +230,8 @@
     rate_5: "Children under 8",
     each: "each",
     free: "free!",
-    rates_note: "Rates vary with the season and include breakfast, linen and daily cleaning. Negotiable prices for stays longer than three days.",
-    rates_stamp: "breakfast included ✓",
+    rates_note: "Rates vary with the season. Negotiable prices for stays longer than three days. Breakfast on request (€7). Free cot/crib available for babies.",
+    rates_stamp: "breakfast: €7 per person",
     extra_title: "Cheeky extras",
     extra_lead: "The extra services that make your stay a little more mischievous. Book them directly with us, even at the last minute.",
     ex1_t: "Mountain bike",
@@ -260,13 +252,13 @@
     about_title: "About us",
     about_lead: "B&B \"I Baloss\" in Berbenno is entirely family-run. To those who choose to stay in the Imagna Valley we wish to offer four things, done well.",
     v1_t: "A personalized welcome",
-    v1_d: "Our tourism is not made of big numbers: we take care to answer the requests and needs of every guest.",
+    v1_d: "Our tourism is not made of big numbers: we take care to answer the requests and needs of every single guest.",
     v2_t: "A quiet, homely environment",
-    v2_d: "Where you can relax surrounded by green, feel at home and — why not? — enjoy a rich breakfast in your pajamas. That's the beauty of B&Bs!",
+    v2_d: "Relax surrounded by greenery, feel at home and — why not? — enjoy a rich breakfast in your pajamas. That's the beauty of B&Bs!",
     v3_t: "Environmentally-sustainable tourism",
-    v3_d: "We sort and reduce waste and avoid food waste. The food we offer is preferably home-grown or local. We are members of the <a href=\"http://ecoturismovalleimagna.it/\" target=\"_blank\" rel=\"noopener\">Imagna Valley Eco-tourism Association</a>.",
-    v4_t: "The love we feel for our valley",
-    v4_d: "It's our pleasure to introduce guests to the natural, artistic and cultural beauties of the Imagna Valley, with useful information and materials to make the most of your stay.",
+    v3_d: "We sort and reduce waste, avoiding food waste. The food we offer is preferably home-grown or local.",
+    v4_t: "Passion for our valley and the Bergamo area",
+    v4_d: "It's our pleasure to introduce guests to the natural, artistic and cultural beauties of the Imagna Valley, with useful tips and materials to make the most of your stay.",
     cap_lato: "the south side, where the sun shines all day",
     valle_title: "The Imagna Valley",
     valle_tag: "naturally beautiful, half an hour from Bergamo",
@@ -275,10 +267,10 @@
     va1_d: "Panoramic tracks on foot, with snowshoes, by MTB, e-bike, on horseback or with llamas, across meadows, woods and rural hamlets. In the nearby Adda River Park you cross the river on <strong>Leonardo da Vinci's ferry</strong>. In winter, ski slopes one hour away.",
     va2_t: "Sport & adventure",
     va2_d: "Treetop trails among beech trees at the Roncola Adventure Park, <strong>paragliding from Mount Linzone</strong>, golf at the Albenza Club, speleological tours in the valley's caves.",
-    va3_t: "Spa & relaxation",
-    va3_d: "The S. Omobono thermal baths, the wellness centre and the new <strong>San Pellegrino Spa</strong>: thermal water and silence a few minutes from the B&B.",
+    va3_t: "Relaxation, spas & dining",
+    va3_d: "The wellness center and the new <strong>San Pellegrino Thermal Baths</strong>: thermal water and silence a few minutes from the B&B. It will also be a pleasure to recommend local restaurants, trattorias and farmhouses.",
     va4_t: "With children",
-    va4_d: "Le Cornelle animal park, <strong>Leolandia</strong> amusement park, the Sun Tower astronomical park and sport-fishing ponds.",
+    va4_d: "Le Cornelle animal park, <strong>Leolandia</strong> amusement park, the Sun Tower astronomical park, sport-fishing ponds and a fitness trail along the Imagna river.",
     va5_t: "Spirituality",
     va5_d: "The Cornabusa Sanctuary, the birthplace of <strong>Pope John XXIII</strong> in Sotto il Monte, and paths dotted with \"Santelle\", the little stone chapels of wayfarers.",
     va6_t: "Art & cities",
@@ -289,17 +281,17 @@
     faq_title: "Frequently asked questions",
     faq_lead: "The things we get asked most often, in short. For everything else: phone, email or WhatsApp.",
     faq_q1: "Where is B&B I Baloss?",
-    faq_a1: "In Berbenno, in the Imagna Valley (province of Bergamo), at Via Europa 46: about 30 minutes by car from Bergamo and one hour from Milan (A4 motorway, Dalmine exit). The house overlooks the valley.",
+    faq_a1: "In Berbenno, in the Imagna Valley (province of Bergamo), at Via Europa 25: about 30 minutes by car from Bergamo and one hour from Milan (A4 motorway, Dalmine exit). The house is in a panoramic position overlooking the valley.",
     faq_q2: "How much does a night cost?",
-    faq_a2: "From €50 to €60 for one person and from €70 to €80 for two, depending on the season; third and fourth person €20 each, children free up to 3 years and €10 up to 8. Breakfast, linen and daily cleaning included. Negotiable prices for stays longer than three days.",
+    faq_a2: "From €60 to €70 for one person and from €70 to €90 for two, depending on the season; third and fourth person €30 each, children free up to 3 years and €20 up to 8. Breakfast, linen and daily cleaning included. Negotiable prices for stays longer than three days.",
     faq_q3: "Is the apartment shared with other guests?",
     faq_a3: "No: the 45 m² apartment is for guests' exclusive use, with independent entrance, equipped kitchen and a reserved panoramic terrace. The freedom of a holiday home, with the breakfast of a bed and breakfast.",
     faq_q4: "What is breakfast like?",
     faq_a4: "Italian or continental, preferably prepared with local or home-grown products, served in the B&B or on the terrace. In your pajamas, if you like: that's the beauty of bed and breakfasts.",
     faq_q5: "Is there parking? And Wi-Fi?",
-    faq_a5: "Yes to both: covered parking and free Wi-Fi. There is also a barbecue in the garden, on request.",
+    faq_a5: "Yes to both: covered parking and free Wi-Fi connection. There is also a barbecue in the garden upon request.",
     faq_q6: "What can you do nearby?",
-    faq_a6: "Walking and mountain-bike trails, the San Pellegrino and Sant'Omobono thermal baths, paragliding from Mount Linzone, Bergamo's Upper Town, the Romanesque Rotonda di San Tomè and, for children, Leolandia and the Le Cornelle animal park.",
+    faq_a6: "Walking and mountain bike trails, the San Pellegrino and Sant'Omobono spas, paragliding from Mount Linzone, Bergamo Upper Town, the Romanesque San Tomè and, for kids, Leolandia and Le Cornelle wildlife park.",
     contact_title: "Write us",
     contact_lead: "Tell us when you'd like to stay in the Imagna Valley and how many you are: we reply within the day, on WhatsApp too.",
     addr_valley: "Imagna Valley — Lombardy",
@@ -319,8 +311,7 @@
     f_send: "Send request",
     f_note: "no payment now — it's just a request",
     f_done: "Request sent! We'll reply very soon ✶",
-    ft_tag: "— bed and breakfast in the Imagna Valley",
-    ft_demo: "Redesign demo — \"the baloss's notebook\" concept · contents and photos from the original ibaloss.com"
+    ft_tag: "— bed and breakfast in the Imagna Valley"
   };
 
   /* snapshot dell'italiano dal DOM */

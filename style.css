@@ -239,12 +239,12 @@ img { display: block; max-width: 100%; }
 .hero-copy { max-width: 620px; color: var(--carta); }
 .hero-kicker {
   font-family: var(--f-hand);
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--inchiostro);
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--carta);
   letter-spacing: 0.04em;
   margin-bottom: 0.6rem;
-  text-shadow: 0 1px 2px rgba(246, 241, 227, 0.8);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
   opacity: 0;
   animation: rise 0.7s ease forwards 0.2s;
 }
@@ -268,17 +268,25 @@ img { display: block; max-width: 100%; }
   background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 16" preserveAspectRatio="none"><path d="M3 11 q40 -9 75 -3 q40 7 76 -2 q42 -8 70 1 q30 8 73 -3" fill="none" stroke="%23c4502e" stroke-width="5" stroke-linecap="round"/></svg>') no-repeat center / 100% 100%;
 }
 .hero-sub {
+  font-family: var(--f-hand);
   font-size: 1.15rem;
-  margin-bottom: 1.8rem;
-  color: var(--inchiostro);
   font-weight: 500;
-  text-shadow: 0 1px 1px rgba(246, 241, 227, 0.9), 0 0 12px rgba(246, 241, 227, 0.7);
+  line-height: 1.6;
+  margin-bottom: 1.8rem;
+  color: var(--carta);
+  background: none;
+  border: none;
+  padding: 0;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
   opacity: 0;
   animation: rise 0.8s ease forwards 0.6s;
 }
+
 .hero-sub em {
-  color: var(--marmellata);
+  font-style: normal;
+  color: var(--carta);
   font-weight: 700;
+  text-decoration: underline;
 }
 @keyframes rise {
   from { opacity: 0; transform: translateY(18px); }
